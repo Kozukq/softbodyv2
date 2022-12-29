@@ -1,13 +1,10 @@
 #include "scene.hpp"
 
-
 using namespace cgp;
 
-
-
 // Spring force applied on particle p_i with respect to position p_j.
-vec3 spring_force(const vec3& p_i, const vec3& p_j, float L0, float K)
-{
+vec3 spring_force(const vec3& p_i, const vec3& p_j, float L0, float K) {
+
 	vec3 const p = p_i - p_j;
 	float const L = norm(p);
 	vec3 const u = p / L;
@@ -17,65 +14,30 @@ vec3 spring_force(const vec3& p_i, const vec3& p_j, float L0, float K)
 }
 
 
-void scene_structure::simulation_step(float dt)
-{
+void scene_structure::simulation_step(float dt) {
 
-	// Simulation parameters
-	float const m  = gui.m;        // particle mass
-	float const K  = gui.K;        // spring stiffness
-	float const mu = gui.mu;       // damping coefficient
+	vec3 const g = { 0,0,gui.gy };
 
-	vec3 const g = { 0,0,gui.gy }; // gravity
+	for(particle& p : particles) {
 
-	// Forces
-	vec3 fB_spring  = spring_force(pB, pA, L0, K);
-	vec3 fB_weight  = m * g;
-	vec3 fB_damping = -mu * vB;
-	vec3 fB = fB_spring + fB_weight + fB_damping;
+		for(const spring& s : p.springs) {
 
-	// Numerical Integration
-	//   To do: Change this relation to compute a semi-implicit integration (instead of explicit Euler)
-	// pB = pB + dt * vB;
-	// vB = vB + dt * fB / m;
+			// Forces
+			const vec3 Fspring = spring_force(p.pos,*s.posOther,s.L0,s.K);
+			const vec3 Fweight = p.mass * g;
+			const vec3 Fdamping = -s.mu * p.vel;
+			vec3 F = Fspring + Fweight + Fdamping;
 
-	// Velocity-Verlet Integration
-	vec3 vBhalf = vB + dt / 2 * fB / m;
-	pB = pB + dt * vBhalf;
-	fB = spring_force(pB,pA,L0,K) + fB_weight + -mu * vBhalf;
-	vB = vBhalf + dt / 2 * fB / m;
-
-
-	// 2nd spring B to C
-
-	// Forces
-	vec3 fC_spring  = spring_force(pC, pB, L0, K);
-	vec3 fC_weight  = m * g;
-	vec3 fC_damping = -mu * vC;
-	vec3 fC = fC_spring + fC_weight + fC_damping;
-
-	// Velocity-Verlet Integration
-	vec3 vChalf = vC + dt / 2 * fC / m;
-	pC = pC + dt * vChalf;
-	fC = spring_force(pC,pB,L0,K) + fC_weight + -mu * vChalf;
-	vC = vChalf + dt / 2 * fC / m;
-
-	// 2nd spring C to B
-
-	// Forces
-	fB_spring  = spring_force(pB, pC, L0, K);
-	fB_weight  = m * g;
-	fB_damping = -mu * vB;
-	fB = fB_spring + fB_weight + fB_damping;
-
-	// Velocity-Verlet Integration
-	vBhalf = vB + dt / 2 * fB / m;
-	pB = pB + dt * vBhalf;
-	fB = spring_force(pB,pC,L0,K) + fB_weight + -mu * vBhalf;
-	vB = vBhalf + dt / 2 * fB / m;
+			// Velocity-Verlet integration
+			const vec3 halfVel = p.vel + dt / 2 * F / p.mass;
+			p.pos = p.pos + dt * halfVel;
+			F = spring_force(p.pos,*s.posOther,s.L0,s.K) + Fweight + Fdamping;
+			p.vel = halfVel + dt / 2 * F / p.mass;
+		}	
+	}
 }
 
-void scene_structure::display()
-{
+void scene_structure::display() {
 	// Basics common elements
 	// ***************************************** //
 	timer.update();
@@ -83,42 +45,79 @@ void scene_structure::display()
 	if (gui.display_frame)
 		draw(global_frame, environment);
 
-
 	simulation_step(timer.scale * 0.01f);
 
-	particle_sphere.transform.translation = pA;
-	particle_sphere.shading.color = { 0,0,0 };
-	draw(particle_sphere, environment);
+	for(const particle& p : particles) {
 
-	particle_sphere.transform.translation = pB;
-	particle_sphere.shading.color = { 1,0,0 };
-	draw(particle_sphere, environment);
+		particle_sphere.transform.translation = p.pos;
+		particle_sphere.shading.color = { 0,0,0 };
+		draw(particle_sphere,environment);
 
-	particle_sphere.transform.translation = pC;
-	particle_sphere.shading.color = { 0,1,0 };
-	draw(particle_sphere,environment);
+		for(const spring& s : p.springs) {
 
-	draw_segment(pA, pB);
-	draw_segment(pB,pC);
+			draw_segment(p.pos,*s.posOther);
+		}
+	}
 }
 
 
 
-void scene_structure::initialize()
-{
-	// Initial position and speed of particles
-	// ******************************************* //
-	pA = { 0,0,0 };     
-	vB = { 0,0,0 };     
+void scene_structure::initialize() {
 
-	pB = { 0.0f,0.45f,0.0f }; 
-	vB = { 0,0,0 };    
+	// AUTO CHAIN
+	int len = 25;
+	float dl = 6.0f / float(len);
+	float curpos = 4.0f;
+	for(int i = 0; i < len; i++) {
 
-	pC = pB + cgp::vec3(0,0.5,0);
-	vC = { 0,0,0 };
+		particles.push_back(particle(0.01f,vec3(0,i*0.01f,curpos),vec3(0,0,0)));
+		curpos -= dl;
+	}
+	for(int i = 1; i < len; i++) {
 
-	L0 = 0.4f; 
+		particles[i].springs.push_back(spring(&particles[i-1].pos,len*1.0f,0.01f,dl));
+		if(i < len-1) particles[i].springs.push_back(spring(&particles[i+1].pos,len*1.0f,0.01f,dl));
+	}
 
+	// CUBE
+	//   4----5
+	//  /|   /| 
+	// 0----1 |
+	// | 6--|-7
+	// |/   |/
+	// 2----3	
+	// particles.push_back(particle(0.01f,vec3(1,-1,1),vec3(0,0,0)));
+	// particles.push_back(particle(0.01f,vec3(1,1,1),vec3(0,0,0)));
+	// particles.push_back(particle(0.01f,vec3(1,-1,-1),vec3(0,0,0)));
+	// particles.push_back(particle(0.01f,vec3(1,1,-1),vec3(0,0,0)));
+	// particles.push_back(particle(0.01f,vec3(-1,-1,1),vec3(0,0,0)));
+	// particles.push_back(particle(0.01f,vec3(-1,1,1),vec3(0,0,0)));
+	// particles.push_back(particle(0.01f,vec3(-1,-1,-1),vec3(0,0,0)));
+	// particles.push_back(particle(0.01f,vec3(-1,1,-1),vec3(0,0,0)));
+	// particles[0].springs.push_back(spring(&particles[4].pos,5.0f,0.01f,2));
+	// particles[0].springs.push_back(spring(&particles[1].pos,5.0f,0.01f,2));
+	// particles[0].springs.push_back(spring(&particles[2].pos,5.0f,0.01f,2));
+	// particles[1].springs.push_back(spring(&particles[5].pos,5.0f,0.01f,2));
+	// particles[1].springs.push_back(spring(&particles[0].pos,5.0f,0.01f,2));
+	// particles[1].springs.push_back(spring(&particles[3].pos,5.0f,0.01f,2));
+	// particles[2].springs.push_back(spring(&particles[6].pos,5.0f,0.01f,2));
+	// particles[2].springs.push_back(spring(&particles[3].pos,5.0f,0.01f,2));
+	// particles[2].springs.push_back(spring(&particles[0].pos,5.0f,0.01f,2));
+	// particles[3].springs.push_back(spring(&particles[7].pos,5.0f,0.01f,2));
+	// particles[3].springs.push_back(spring(&particles[2].pos,5.0f,0.01f,2));
+	// particles[3].springs.push_back(spring(&particles[1].pos,5.0f,0.01f,2));
+	// particles[4].springs.push_back(spring(&particles[0].pos,5.0f,0.01f,2));
+	// particles[4].springs.push_back(spring(&particles[5].pos,5.0f,0.01f,2));
+	// particles[4].springs.push_back(spring(&particles[6].pos,5.0f,0.01f,2));
+	// particles[5].springs.push_back(spring(&particles[1].pos,5.0f,0.01f,2));
+	// particles[5].springs.push_back(spring(&particles[4].pos,5.0f,0.01f,2));
+	// particles[5].springs.push_back(spring(&particles[7].pos,5.0f,0.01f,2));
+	// particles[6].springs.push_back(spring(&particles[2].pos,5.0f,0.01f,2));
+	// particles[6].springs.push_back(spring(&particles[7].pos,5.0f,0.01f,2));
+	// particles[6].springs.push_back(spring(&particles[4].pos,5.0f,0.01f,2));
+	// particles[7].springs.push_back(spring(&particles[3].pos,5.0f,0.01f,2));
+	// particles[7].springs.push_back(spring(&particles[6].pos,5.0f,0.01f,2));
+	// particles[7].springs.push_back(spring(&particles[5].pos,5.0f,0.01f,2));
 
 	particle_sphere.initialize(mesh_primitive_sphere(0.05f));
 
@@ -128,22 +127,19 @@ void scene_structure::initialize()
 	segment.initialize({{0,0,0},{1,0,0}});
 
 	global_frame.initialize(mesh_primitive_frame(), "Frame");
-	environment.camera.look_at({ 3.0f,0.5f,0.0f }, { 0,0,0 }, { 0,0,1 });
+	environment.camera.look_at({ 10.0f,0.5f,0.0f }, { 0,0,0 }, { 0,0,1 });
 }
 
-void scene_structure::display_gui()
-{
+void scene_structure::display_gui() {
+
 	ImGui::Checkbox("Frame", &gui.display_frame);
-	ImGui::SliderFloat("Particle mass",&gui.m,0.01f,1.0f);
-	ImGui::SliderFloat("Spring stiffness",&gui.K,1.0f,10.0f);
-	ImGui::SliderFloat("Damping coefficient",&gui.mu,0.0f,0.05f);
 	ImGui::SliderFloat("Gravity",&gui.gy,-10.0f,10.0f);
 }
 
 
 
-void scene_structure::draw_segment(vec3 const& a, vec3 const& b)
-{
+void scene_structure::draw_segment(vec3 const& a, vec3 const& b) {
+
 	segment.update({ a, b });
 	draw(segment, environment);
 }

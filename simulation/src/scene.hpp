@@ -2,20 +2,30 @@
 
 #include "cgp/cgp.hpp"
 
-
-
-
-
 struct gui_parameters {
 	bool display_frame = false;
-	float m  = 0.01f;        // particle mass
-	float K  = 5.0f;        // spring stiffness
-	float mu = 0.01f;       // damping coefficient
 	float gy = -9.81f; // gravity
 };
 
+struct spring {
 
+	cgp::vec3* posOther;
+	float K; 				// spring stiffness
+	float mu; 				// damping coefficient
+	float L0; 				// rest-length of spring
 
+	spring(cgp::vec3* _posOther, float _K, float _mu, float _L0): posOther(_posOther), K(_K), mu(_mu), L0(_L0) {};
+};
+
+struct particle {
+
+	float mass;
+	cgp::vec3 pos;
+	cgp::vec3 vel;
+	std::vector<spring> springs;
+
+	particle(float _mass, cgp::vec3 _pos, cgp::vec3 _vel): mass(_mass), pos(_pos), vel(_vel) {};
+};
 
 struct scene_structure {
 	
@@ -24,14 +34,7 @@ struct scene_structure {
 	// ****************************** //
 
 	// Particles:
-	cgp::vec3 pA; // position of particle A
-	cgp::vec3 pB; // position of particle B
-	cgp::vec3 vA; // velocity of particle A
-	cgp::vec3 vB; // velocity of particle B
-	cgp::vec3 pC;
-	cgp::vec3 vC;
-	float L0; // Rest-length of spring
-
+	std::vector<particle> particles;
 
 	void simulation_step(float dt);
 	void draw_segment(cgp::vec3 const& a, cgp::vec3 const& b);
