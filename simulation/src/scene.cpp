@@ -20,6 +20,12 @@ void scene_structure::simulation_step(float dt) {
 
 	for(particle& p : particles) {
 
+		// Colliding with ground plane at arbitrary Z height
+		if(p.pos.z < -1.5f) {
+			p.pos.z = -1.5f;
+			p.vel = -p.vel * dt;
+		}
+
 		for(const spring& s : p.springs) {
 
 			// Forces
@@ -33,7 +39,7 @@ void scene_structure::simulation_step(float dt) {
 			p.pos = p.pos + dt * halfVel;
 			F = spring_force(p.pos,*s.posOther,s.L0,s.K) + Fweight + Fdamping;
 			p.vel = halfVel + dt / 2 * F / p.mass;
-		}	
+		}
 	}
 }
 
@@ -55,7 +61,7 @@ void scene_structure::display() {
 
 		for(const spring& s : p.springs) {
 
-			draw_segment(p.pos,*s.posOther);
+			if(!s.isHidden) draw_segment(p.pos,*s.posOther);
 		}
 	}
 }
@@ -65,19 +71,19 @@ void scene_structure::display() {
 void scene_structure::initialize() {
 
 	// AUTO CHAIN
-	int len = 25;
-	float dl = 6.0f / float(len);
-	float curpos = 4.0f;
-	for(int i = 0; i < len; i++) {
+	// int len = 25;
+	// float dl = 6.0f / float(len);
+	// float curpos = 4.0f;
+	// for(int i = 0; i < len; i++) {
 
-		particles.push_back(particle(0.01f,vec3(0,i*0.01f,curpos),vec3(0,0,0)));
-		curpos -= dl;
-	}
-	for(int i = 1; i < len; i++) {
+	// 	particles.push_back(particle(0.01f,vec3(0,i*0.01f,curpos),vec3(0,0,0)));
+	// 	curpos -= dl;
+	// }
+	// for(int i = 1; i < len; i++) {
 
-		particles[i].springs.push_back(spring(&particles[i-1].pos,len*1.0f,0.01f,dl));
-		if(i < len-1) particles[i].springs.push_back(spring(&particles[i+1].pos,len*1.0f,0.01f,dl));
-	}
+	// 	particles[i].springs.push_back(spring(&particles[i-1].pos,len*1.0f,0.01f,dl));
+	// 	if(i < len-1) particles[i].springs.push_back(spring(&particles[i+1].pos,len*1.0f,0.01f,dl));
+	// }
 
 	// CUBE
 	//   4----5
@@ -86,38 +92,49 @@ void scene_structure::initialize() {
 	// | 6--|-7
 	// |/   |/
 	// 2----3	
-	// particles.push_back(particle(0.01f,vec3(1,-1,1),vec3(0,0,0)));
-	// particles.push_back(particle(0.01f,vec3(1,1,1),vec3(0,0,0)));
-	// particles.push_back(particle(0.01f,vec3(1,-1,-1),vec3(0,0,0)));
-	// particles.push_back(particle(0.01f,vec3(1,1,-1),vec3(0,0,0)));
-	// particles.push_back(particle(0.01f,vec3(-1,-1,1),vec3(0,0,0)));
-	// particles.push_back(particle(0.01f,vec3(-1,1,1),vec3(0,0,0)));
-	// particles.push_back(particle(0.01f,vec3(-1,-1,-1),vec3(0,0,0)));
-	// particles.push_back(particle(0.01f,vec3(-1,1,-1),vec3(0,0,0)));
-	// particles[0].springs.push_back(spring(&particles[4].pos,5.0f,0.01f,2));
-	// particles[0].springs.push_back(spring(&particles[1].pos,5.0f,0.01f,2));
-	// particles[0].springs.push_back(spring(&particles[2].pos,5.0f,0.01f,2));
-	// particles[1].springs.push_back(spring(&particles[5].pos,5.0f,0.01f,2));
-	// particles[1].springs.push_back(spring(&particles[0].pos,5.0f,0.01f,2));
-	// particles[1].springs.push_back(spring(&particles[3].pos,5.0f,0.01f,2));
-	// particles[2].springs.push_back(spring(&particles[6].pos,5.0f,0.01f,2));
-	// particles[2].springs.push_back(spring(&particles[3].pos,5.0f,0.01f,2));
-	// particles[2].springs.push_back(spring(&particles[0].pos,5.0f,0.01f,2));
-	// particles[3].springs.push_back(spring(&particles[7].pos,5.0f,0.01f,2));
-	// particles[3].springs.push_back(spring(&particles[2].pos,5.0f,0.01f,2));
-	// particles[3].springs.push_back(spring(&particles[1].pos,5.0f,0.01f,2));
-	// particles[4].springs.push_back(spring(&particles[0].pos,5.0f,0.01f,2));
-	// particles[4].springs.push_back(spring(&particles[5].pos,5.0f,0.01f,2));
-	// particles[4].springs.push_back(spring(&particles[6].pos,5.0f,0.01f,2));
-	// particles[5].springs.push_back(spring(&particles[1].pos,5.0f,0.01f,2));
-	// particles[5].springs.push_back(spring(&particles[4].pos,5.0f,0.01f,2));
-	// particles[5].springs.push_back(spring(&particles[7].pos,5.0f,0.01f,2));
-	// particles[6].springs.push_back(spring(&particles[2].pos,5.0f,0.01f,2));
-	// particles[6].springs.push_back(spring(&particles[7].pos,5.0f,0.01f,2));
-	// particles[6].springs.push_back(spring(&particles[4].pos,5.0f,0.01f,2));
-	// particles[7].springs.push_back(spring(&particles[3].pos,5.0f,0.01f,2));
-	// particles[7].springs.push_back(spring(&particles[6].pos,5.0f,0.01f,2));
-	// particles[7].springs.push_back(spring(&particles[5].pos,5.0f,0.01f,2));
+	particles.push_back(particle(0.01f,vec3(1,-1,1),vec3(0,0,0)));
+	particles.push_back(particle(0.01f,vec3(1,1,1),vec3(0,0,0)));
+	particles.push_back(particle(0.01f,vec3(1,-1,-1),vec3(0,0,0)));
+	particles.push_back(particle(0.01f,vec3(1,1,-1),vec3(0,0,0)));
+	particles.push_back(particle(0.01f,vec3(-1,-1,1),vec3(0,0,0)));
+	particles.push_back(particle(0.01f,vec3(-1,1,1),vec3(0,0,0)));
+	particles.push_back(particle(0.01f,vec3(-1,-1,-1),vec3(0,0,0)));
+	particles.push_back(particle(0.01f,vec3(-1,1,-1),vec3(0,0,0)));
+	particles[0].springs.push_back(spring(&particles[4].pos,5.0f,0.01f,2));
+	particles[0].springs.push_back(spring(&particles[1].pos,5.0f,0.01f,2));
+	particles[0].springs.push_back(spring(&particles[2].pos,5.0f,0.01f,2));
+	particles[1].springs.push_back(spring(&particles[5].pos,5.0f,0.01f,2));
+	particles[1].springs.push_back(spring(&particles[0].pos,5.0f,0.01f,2));
+	particles[1].springs.push_back(spring(&particles[3].pos,5.0f,0.01f,2));
+	particles[2].springs.push_back(spring(&particles[6].pos,5.0f,0.01f,2));
+	particles[2].springs.push_back(spring(&particles[3].pos,5.0f,0.01f,2));
+	particles[2].springs.push_back(spring(&particles[0].pos,5.0f,0.01f,2));
+	particles[3].springs.push_back(spring(&particles[7].pos,5.0f,0.01f,2));
+	particles[3].springs.push_back(spring(&particles[2].pos,5.0f,0.01f,2));
+	particles[3].springs.push_back(spring(&particles[1].pos,5.0f,0.01f,2));
+	particles[4].springs.push_back(spring(&particles[0].pos,5.0f,0.01f,2));
+	particles[4].springs.push_back(spring(&particles[5].pos,5.0f,0.01f,2));
+	particles[4].springs.push_back(spring(&particles[6].pos,5.0f,0.01f,2));
+	particles[5].springs.push_back(spring(&particles[1].pos,5.0f,0.01f,2));
+	particles[5].springs.push_back(spring(&particles[4].pos,5.0f,0.01f,2));
+	particles[5].springs.push_back(spring(&particles[7].pos,5.0f,0.01f,2));
+	particles[6].springs.push_back(spring(&particles[2].pos,5.0f,0.01f,2));
+	particles[6].springs.push_back(spring(&particles[7].pos,5.0f,0.01f,2));
+	particles[6].springs.push_back(spring(&particles[4].pos,5.0f,0.01f,2));
+	particles[7].springs.push_back(spring(&particles[3].pos,5.0f,0.01f,2));
+	particles[7].springs.push_back(spring(&particles[6].pos,5.0f,0.01f,2));
+	particles[7].springs.push_back(spring(&particles[5].pos,5.0f,0.01f,2));
+
+	float cubeDiag = 2 * sqrt(3);
+	cubeDiag = 4;
+	particles[0].springs.push_back(spring(&particles[7].pos,5.0f,0.01f,cubeDiag,true));
+	particles[7].springs.push_back(spring(&particles[0].pos,5.0f,0.01f,cubeDiag,true));
+	particles[1].springs.push_back(spring(&particles[6].pos,5.0f,0.01f,cubeDiag,true));
+	particles[6].springs.push_back(spring(&particles[1].pos,5.0f,0.01f,cubeDiag,true));
+	particles[2].springs.push_back(spring(&particles[5].pos,5.0f,0.01f,cubeDiag,true));
+	particles[3].springs.push_back(spring(&particles[4].pos,5.0f,0.01f,cubeDiag,true));
+	particles[5].springs.push_back(spring(&particles[2].pos,5.0f,0.01f,cubeDiag,true));
+	particles[4].springs.push_back(spring(&particles[3].pos,5.0f,0.01f,cubeDiag,true));
 
 	particle_sphere.initialize(mesh_primitive_sphere(0.05f));
 

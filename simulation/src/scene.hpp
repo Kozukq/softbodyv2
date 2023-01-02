@@ -13,8 +13,9 @@ struct spring {
 	float K; 				// spring stiffness
 	float mu; 				// damping coefficient
 	float L0; 				// rest-length of spring
+	bool isHidden;
 
-	spring(cgp::vec3* _posOther, float _K, float _mu, float _L0): posOther(_posOther), K(_K), mu(_mu), L0(_L0) {};
+	spring(cgp::vec3* _posOther, float _K, float _mu, float _L0, bool _isHidden = false): posOther(_posOther), K(_K), mu(_mu), L0(_L0), isHidden(_isHidden) {};
 };
 
 struct particle {
