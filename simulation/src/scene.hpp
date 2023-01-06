@@ -4,7 +4,14 @@
 
 struct gui_parameters {
 	bool display_frame = false;
+	bool displayMesh = true;
+	bool displayParticles = false;
+	bool displaySprings = false;
 	float gy = -9.81f; // gravity
+	// float pM;	
+	float sK;
+	float sMu;
+	// float sL0;
 };
 
 struct spring {
@@ -13,9 +20,9 @@ struct spring {
 	float K; 				// spring stiffness
 	float mu; 				// damping coefficient
 	float L0; 				// rest-length of spring
-	bool isHidden;
+	bool isDrawn;
 
-	spring(cgp::vec3* _posOther, float _K, float _mu, float _L0, bool _isHidden = false): posOther(_posOther), K(_K), mu(_mu), L0(_L0), isHidden(_isHidden) {};
+	spring(cgp::vec3* _posOther, float _K, float _mu, float _L0, bool _isDrawn = true): posOther(_posOther), K(_K), mu(_mu), L0(_L0), isDrawn(_isDrawn) {};
 };
 
 struct particle {
@@ -44,6 +51,8 @@ struct scene_structure {
 	cgp::mesh_drawable particle_sphere;
 	cgp::segments_drawable segment;
 
+	cgp::mesh_drawable cube;
+	cgp::mesh_drawable ground;
 
 	// Standard elements of the scene
 	cgp::mesh_drawable global_frame;          // The standard global frame
