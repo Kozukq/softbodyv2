@@ -17,15 +17,21 @@ void scene_structure::simulation_step(float dt) {
 
 	vec3 const g = { 0,0,gui.gy };
 
-	bool isTriggered = false;
-	if(ImGui::Button("Add Velocity")) {
-
-			isTriggered = true;
-	}
+	bool onClickXneg = ImGui::Button("-X Force"); ImGui::SameLine();
+	bool onClickXpos = ImGui::Button("+X Force");
+	bool onClickYneg = ImGui::Button("-Y Force"); ImGui::SameLine();
+	bool onClickYpos = ImGui::Button("+Y Force");
+	bool onClickZneg = ImGui::Button("-Z Force"); ImGui::SameLine();
+	bool onClickZpos = ImGui::Button("+Z Force");
 
 	for(particle& p : particles) {
 
-		if(isTriggered) p.vel += vec3(0,0,10);
+		if(onClickXneg) p.vel += vec3(-10,0,0);
+		if(onClickXpos) p.vel += vec3(10,0,0);
+		if(onClickYneg) p.vel += vec3(0,-10,0);
+		if(onClickYpos) p.vel += vec3(0,10,0);
+		if(onClickZneg) p.vel += vec3(0,0,-10);
+		if(onClickZpos) p.vel += vec3(0,0,10);
 
 		// Colliding with ground plane at arbitrary Z height
 		if(p.pos.z < -1.5f) {
